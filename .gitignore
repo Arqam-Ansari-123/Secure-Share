@@ -1,0 +1,164 @@
+# =============================================================================
+# SecureShare — repository root
+#
+# Git reads .gitignore files HIERARCHICALLY. Frontend/.gitignore and
+# Backend/.gitignore already handle their own directories, and their patterns
+# are relative to where they sit. This file is for things that span the project,
+# and for secrets.
+#
+# Anything marked KEEP below is a build input. Ignoring it breaks the build on
+# the server, usually with an error that does not mention the missing file.
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# SECRETS — the ROOT .env only
+# -----------------------------------------------------------------------------
+# THE LEADING SLASH IS LOAD-BEARING. READ THIS BEFORE CHANGING IT.
+#
+# A pattern with no slash in it means "match at ANY depth" in Git. So a bare
+# `.env` line here would ALSO silently ignore:
+#
+#     Frontend/.env         VITE_SURFACE=public
+#     Frontend/.env.staff   VITE_SURFACE=staff
+#
+# Those two files contain NO secrets — one line each — but they are what tells
+# the build which bundle to produce. Without them BOTH builds emit the public
+# bundle, and vault.genetechsolutions.com would serve your employees the client
+# page with no login on it. Nothing errors. Nothing logs.
+#
+# The leading slash anchors these rules to the repository root only.
+/.env
+/.env.*
+!/.env.example
+
+# KEEP, explicitly. The rules above already do not match these, because they are
+# anchored — this is here so nobody "tidies up" the slashes later.
+!Frontend/.env
+!Frontend/.env.staff
+
+# Belt and braces for the common local variants, wherever they appear.
+*.env.local
+*.env.production.local
+
+
+# -----------------------------------------------------------------------------
+# CERTIFICATES
+# -----------------------------------------------------------------------------
+# The domain CA certificate itself is public information, but certs/ is exactly
+# where a private key would land next. Ignore the contents, keep the directory.
+# The server re-exports the CA straight out of Active Directory anyway:
+#     python manage.py export-ad-ca
+Backend/certs/*
+!Backend/certs/.gitkeep
+
+# Never, under any circumstances.
+*.pem
+*.key
+*.pfx
+*.p12
+!Backend/certs/.gitkeep
+
+
+# -----------------------------------------------------------------------------
+# BUILD OUTPUT — rebuilt on the server, never committed
+# -----------------------------------------------------------------------------
+# `npm run build` produces dist/staff and dist/public. These MUST NOT be in git:
+#
+#   1. They are generated from the source that is already committed, so keeping
+#      them is duplication that goes stale the moment anyone edits a component.
+#   2. Every build rewrites every hashed filename, so they conflict on literally
+#      every merge.
+#   3. The build must run on the server regardless — it is the only way to be
+#      sure the bundle matches the checked-out source.
+#
+# Frontend/.gitignore already has `dist`. Repeated here so the intent is
+# obvious from the root, and so the two surface folders are named outright.
+Frontend/dist/
+Frontend/dist/staff/
+Frontend/dist/public/
+dist-ssr/
+*.local
+
+
+# -----------------------------------------------------------------------------
+# DEPENDENCIES — restored from the lockfiles, never committed
+# -----------------------------------------------------------------------------
+node_modules/
+Backend/.venv/
+.venv/
+__pycache__/
+*.py[oc]
+*.egg-info/
+
+# KEEP BOTH OF THESE. package-lock.json is not an "unnecessary package file" —
+# `npm ci` on the server REFUSES TO RUN without it, and it is what pins the
+# exact dependency versions the build was tested against. package.json defines
+# the build scripts themselves.
+!Frontend/package.json
+!Frontend/package-lock.json
+!Backend/requirements.txt
+!Backend/pyproject.toml
+
+
+# -----------------------------------------------------------------------------
+# ASSETS THAT LOOK DISPOSABLE AND ARE NOT
+# -----------------------------------------------------------------------------
+# Listed as explicit keeps because they are the two things people delete when
+# trimming a repo:
+#
+#   Frontend/Assets/*.png       imported directly by the build —
+#                               AppShell.tsx:21 `import logoMark from
+#                               '../../Assets/logo.png'`. Missing = build fails.
+#   Frontend/public/fonts/*     loaded by index.css as url('/fonts/…woff2').
+#                               Missing = the app renders in a fallback font.
+!Frontend/Assets/
+!Frontend/public/
+
+
+# -----------------------------------------------------------------------------
+# INTERNAL WORKING DOCUMENTS
+# -----------------------------------------------------------------------------
+# The long narrative docs stay on your machine. README.md and DEPLOY.md are
+# deliberately NOT here: a repo needs a README, and DEPLOY.md is the guide you
+# read on the server while deploying.
+#
+# To publish them after all, delete these four lines.
+# To ignore EVERY markdown file instead, replace them with:
+#     *.md
+#     !README.md
+#     !DEPLOY.md
+HOW-IT-WORKS.md
+NETWORKING-EXPLAINED.md
+ROUTING-IN-SIMPLE-WORDS.md
+Deployment.md
+
+
+# -----------------------------------------------------------------------------
+# TOOLING, EDITOR, OS
+# -----------------------------------------------------------------------------
+.claude/
+.impeccable/
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs and scratch
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.tmp
+*.bak
+*.orig

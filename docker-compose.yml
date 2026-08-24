@@ -1,0 +1,113 @@
+# SecureShare — Genetech Solutions
+#
+# Dev tip for this machine: your code is on F:\ (NTFS) and Docker runs in WSL.
+# Bind-mounting NTFS into WSL Docker is slow and breaks file-watch reload, so for
+# day-to-day work start only the databases and run the backend natively:
+#
+#     docker compose up -d postgres redis
+#     cd Backend && .venv\Scripts\python.exe -m uvicorn main:app --reload --port 8000
+#
+# Use `docker compose up --build` (all three services) for a production-shaped run.
+
+services:
+  postgres:
+    image: postgres:16
+    # Come back automatically when the Docker daemon starts. Without this, a WSL
+    # VM shutdown leaves the whole stack down until someone runs `up` again, and
+    # the symptom is an app that "just stops working" with nothing in any log.
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: secretshare
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      # consumed by sql/000_roles.sh to create the least-privilege app role
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:-app_rw_dev_password}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Applies 000_roles.sh -> 001_schema.sql -> 002_grants.sql in filename
+      # order, as the superuser, on FIRST boot of an empty pgdata volume only.
+      - ./Backend/sql:/docker-entrypoint-initdb.d:ro
+    ports:
+      # Bound to loopback, NOT 0.0.0.0. On a server with a public IP the bare
+      # "5432:5432" form publishes Postgres to the internet. Localhost tooling
+      # (psql, pgAdmin, a WSL client) still reaches it exactly as before.
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appuser -d secretshare"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    # Persistence off on purpose: secrets must not survive to disk.
+    command: ["redis-server", "--appendonly", "no", "--save", ""]
+    ports:
+      # Loopback only. Redis here has NO password and holds the ciphertext of
+      # every live secret plus every session — an internet-reachable copy is
+      # compromised within minutes of the IP being scanned.
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./Backend
+    restart: unless-stopped
+    environment:
+      # app_rw, never appuser — appuser owns the tables, so the audit-table
+      # REVOKE would not bind to it.
+      DATABASE_URL: postgresql://app_rw:${APP_DB_PASSWORD:-app_rw_dev_password}@postgres:5432/secretshare
+      REDIS_URL: redis://redis:6379/0
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:5173}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:5173}
+      # MUST list every hostname the browser will send. TrustedHostMiddleware
+      # answers anything else with a bare 400 and no log line, which looks
+      # exactly like an outage. Overridden from .env in production.
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
+      ENV: ${ENV:-development}
+      MAX_BLOB_BYTES: "5242880"
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-dev-webhook-secret}
+      # --- Active Directory (see .env.example) ---
+      # Defaults here are deliberately INERT: AD off, no bind account, no group.
+      # Real values come from .env, so a missing .env fails to authenticate
+      # rather than silently pointing at the wrong forest or admitting everyone.
+      AD_ENABLED: ${AD_ENABLED:-false}
+      AD_HOST: ${AD_HOST:-DC01.genetech.pk}
+      AD_PORT: ${AD_PORT:-636}
+      AD_TLS_MODE: ${AD_TLS_MODE:-ldaps}
+      AD_CA_CERT: ${AD_CA_CERT:-}
+      AD_BASE_DN: ${AD_BASE_DN:-DC=genetech,DC=pk}
+      AD_NETBIOS: ${AD_NETBIOS:-GENETECH}
+      AD_UPN_SUFFIX: ${AD_UPN_SUFFIX:-genetech.pk}
+      AD_BIND_USER: ${AD_BIND_USER:-}
+      AD_BIND_PASSWORD: ${AD_BIND_PASSWORD:-}
+      AD_REQUIRED_GROUP: ${AD_REQUIRED_GROUP:-}
+      AD_TIMEOUT: ${AD_TIMEOUT:-8}
+      AD_TIMING_FLOOR_MS: ${AD_TIMING_FLOOR_MS:-250}
+      LOCAL_LOGIN_ENABLED: ${LOCAL_LOGIN_ENABLED:-true}
+      STAFF_EMAIL_DOMAINS: ${STAFF_EMAIL_DOMAINS:-genetechsolutions.com}
+    # The container cannot resolve the forest's DNS, and TLS validation compares
+    # the certificate against the NAME we connect to — so the name must resolve
+    # to the DC inside the container. Without this, LDAPS fails with a handshake
+    # error that reads like a network fault.
+    extra_hosts:
+      - "DC01.genetech.pk:${AD_IP:-192.168.11.49}"
+    volumes:
+      # The domain CA, for validating the DC's certificate. Create the directory
+      # and drop the PEM in before enabling TLS.
+      - ./Backend/certs:/certs:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      # Loopback only; nginx is the sole public entry point.
+      - "127.0.0.1:8000:8000"
+
+volumes:
+  pgdata:

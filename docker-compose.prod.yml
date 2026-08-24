@@ -1,0 +1,64 @@
+# SecureShare — production overlay. ALWAYS use it together with the base file:
+#
+#     docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Run with only docker-compose.yml and the backend starts in development mode:
+# no Secure cookie, /docs published, and ALLOWED_HOSTS still set to localhost —
+# so every request arriving through nginx returns a bare 400 Invalid host header
+# with no log line, which looks exactly like an outage.
+#
+# ---------------------------------------------------------------------------
+# THIS FILE OVERRIDES ENVIRONMENT VARIABLES ONLY, AND THAT IS DELIBERATE.
+#
+# Compose merges list-valued keys (like `ports:`) by APPENDING, so an override
+# of `ports: []` appends nothing and leaves the base mapping in place — the
+# exact opposite of what it looks like it does. There is no reliable way to
+# un-publish a port from an override file.
+#
+# The published ports are therefore bound to 127.0.0.1 in docker-compose.yml
+# itself. See DEPLOY.md step 3. Verify the merged result before starting:
+#
+#     docker compose -f docker-compose.yml -f docker-compose.prod.yml config \
+#       | grep -E '^\s+- .*(5432|6379|8000)'
+#
+# Every line printed must begin with 127.0.0.1:
+#
+# `environment:` in mapping form merges key-by-key with the override winning,
+# which IS well-defined — which is why everything below is safe here.
+# ---------------------------------------------------------------------------
+
+services:
+  backend:
+    environment:
+      # Turns on Secure cookies, the __Host- cookie prefix, HSTS,
+      # HTTPSRedirectMiddleware, and hides /docs, /redoc and /openapi.json.
+      ENV: production
+
+      # The base file hard-codes this to localhost,127.0.0.1,backend with no
+      # ${...} substitution, so setting it in .env alone does nothing. Both
+      # real hostnames must appear here or TrustedHostMiddleware rejects every
+      # proxied request.
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+
+      # REQUIRED, and the easiest thing in this deployment to miss. manage.py
+      # connects as the schema OWNER (appuser), not as app_rw, and config.py
+      # defaults this to ...@localhost with the password "changeme". Inside a
+      # container "localhost" is the container itself, so without this line
+      # `manage.py adduser` fails with connection refused and there is no way
+      # to create the first administrator.
+      ADMIN_DATABASE_URL: postgresql://appuser:${DB_PASSWORD}@postgres:5432/secretshare
+
+      # Mixed into every local password hash; lives only in the environment,
+      # never the database, so a stolen pg_dump cannot be attacked offline.
+      # Adding or changing it later invalidates every existing local password —
+      # set it before creating the first account.
+      PASSWORD_PEPPER: ${PASSWORD_PEPPER:-}
+
+      # Not passed through by the base file at all, so without these the
+      # container has no SMTP settings and view-notification email silently
+      # never sends. An empty SMTP_HOST keeps notifications disabled.
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-secureshare@genetechsolutions.com}

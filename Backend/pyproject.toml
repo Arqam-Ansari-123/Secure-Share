@@ -1,0 +1,19 @@
+[project]
+name = "secureshare-backend"
+version = "0.1.0"
+description = "SecureShare — one-time secret sharing backend (Genetech Solutions)"
+readme = "README.md"
+requires-python = ">=3.14"
+
+# Kept in lockstep with requirements.txt on purpose: `uv sync` / `uv run` reconcile the
+# venv against THIS list and will prune anything missing from it.
+dependencies = [
+    "fastapi==0.141.1",
+    "uvicorn[standard]==0.52.1",
+    "pydantic==2.13.4",
+    "psycopg[binary,pool]==3.3.4",
+    "redis==8.1.0",
+    "python-multipart==0.0.32",
+    "httpx==0.28.1",
+    "ldap3==2.9.1",
+]
