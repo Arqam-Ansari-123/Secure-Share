@@ -55,18 +55,19 @@ export default function App() {
     <Routes>
       {(
         [
-          ['/', <Landing key="h" />],
+          // `true` = full-bleed: Landing supplies its own max-w-6xl containers.
+          ['/', <Landing key="h" />, true],
           // Outbound: opening a secret we sent them.
-          ['/s/:token', <Reveal key="r" />],
+          ['/s/:token', <Reveal key="r" />, false],
           // Inbound: answering a credential request we sent them. Public by
           // necessity — clients have no account. The request token is the
           // authorization.
-          ['/r/:token', <RequestSubmit key="rs" />],
-          ['/gone', <Gone key="g" />],
-          ['*', <NotFound key="nf" />],
+          ['/r/:token', <RequestSubmit key="rs" />, false],
+          ['/gone', <Gone key="g" />, false],
+          ['*', <NotFound key="nf" />, false],
         ] as const
-      ).map(([path, el]) => (
-        <Route key={path} path={path} element={<PublicShell>{el}</PublicShell>} />
+      ).map(([path, el, wide]) => (
+        <Route key={path} path={path} element={<PublicShell wide={wide}>{el}</PublicShell>} />
       ))}
     </Routes>
   )
