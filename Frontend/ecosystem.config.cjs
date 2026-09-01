@@ -41,7 +41,11 @@ const PUBLIC_PORT = 4174 // serves dist/public -> share.<domain>
  */
 const staticServer = (name, dir, port) => ({
   name,
-  script: 'serve',
+  // ABSOLUTE PATH, not the bare name. PM2 7.x accepts `script: 'serve'`,
+  // reports the process as "online", and then never spawns it — no pid, no
+  // error, empty logs, ports never bound. Verified on the production host.
+  // If serve lives elsewhere, use the output of `which serve`.
+  script: '/usr/bin/serve',
   args: `-s ${dir} -l tcp://127.0.0.1:${port}`,
   // `serve` is a binary on PATH (npm i -g serve), not a JS file for Node to run.
   // If PM2 ever reports "Script not found", replace `script` above with the

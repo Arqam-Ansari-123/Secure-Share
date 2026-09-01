@@ -95,7 +95,7 @@ services:
     # to the DC inside the container. Without this, LDAPS fails with a handshake
     # error that reads like a network fault.
     extra_hosts:
-      - "DC01.genetech.pk:${AD_IP:-192.168.11.49}"
+      - "${AD_HOST:-DC01.genetech.pk}:${AD_IP:-192.168.11.49}"
     volumes:
       # The domain CA, for validating the DC's certificate. Create the directory
       # and drop the PEM in before enabling TLS.

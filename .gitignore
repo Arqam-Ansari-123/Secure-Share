@@ -133,6 +133,11 @@ NETWORKING-EXPLAINED.md
 ROUTING-IN-SIMPLE-WORDS.md
 Deployment.md
 
+# Contains the AD service-account password. The value IT supplied is base64 and
+# decodes back to the real credential, so this file is a secret in every sense
+# that matters. Send it to IT over a secure channel; never commit it.
+IT.md
+
 
 # -----------------------------------------------------------------------------
 # TOOLING, EDITOR, OS

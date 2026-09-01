@@ -19,7 +19,7 @@ No scripts. Every step is a command you paste and a result you can check.
 | 2 | [The three `.env` files git did not clone](#2--the-three-env-files-git-did-not-clone) |
 | 3 | [Close the database ports](#3--close-the-database-ports) |
 | 4 | [The production overlay file](#4--the-production-overlay-file) |
-| 5 | [Tailscale — the route to the domain controller](#5--tailscale--the-route-to-the-domain-controller) |
+| 5 | [Reaching the domain controller](#5--reaching-the-domain-controller) |
 | 6 | [Start the backend](#6--start-the-backend-docker) |
 | 7 | [Build the two frontends](#7--build-the-two-frontends) |
 | 8 | [PM2](#8--pm2--the-two-static-servers) |
@@ -72,13 +72,13 @@ connection is refused before it starts.
 
 nginx is the only program with a public socket. It is the front door.
 
-## How nginx tells vault. from share.
+## How nginx tells priv. from priv-req.
 
 DNS is dumber than people expect. It only turns a name into an IP:
 
 ```
-vault.genetechsolutions.com  →  66.51.159.115
-share.genetechsolutions.com  →  66.51.159.115     ← the same address
+priv.genetechsolutions.com       →  66.51.159.115
+priv-req.genetechsolutions.com  →  66.51.159.115   ← the same address
 ```
 
 Both names arrive at the same machine, on the same port 443. The packets are
@@ -89,7 +89,7 @@ and the browser fills it in from the address bar:
 
 ```http
 GET /create HTTP/1.1
-Host: vault.genetechsolutions.com      ← this line is the whole mechanism
+Host: priv.genetechsolutions.com   ← this line is the whole mechanism
 Cookie: __Host-ss_staff=...
 ```
 
@@ -98,15 +98,15 @@ uses the first one that matches. That is called **virtual hosting**, and it is w
 one machine with one IP can host any number of sites.
 
 ```
-                       ┌─────────────────────────────────┐
-   Host: vault....     │  server {                       │
-   ──────────────────► │    server_name vault.gene...;   │ ── matches ──►  :4173
-                       │  }                              │
-                       ├─────────────────────────────────┤
-   Host: share....     │  server {                       │
-   ──────────────────► │    server_name share.gene...;   │ ── matches ──►  :4174
-                       │  }                              │
-                       └─────────────────────────────────┘
+                              ┌─────────────────────────────────────┐
+   Host: priv.         │  server {                           │
+   ───────────────────────►   │    server_name priv.…;       │ ──► :4173
+                              │  }                                  │
+                              ├─────────────────────────────────────┤
+   Host: priv-req.    │  server {                           │
+   ───────────────────────►   │    server_name priv-req.…;  │ ──► :4174
+                              │  }                                  │
+                              └─────────────────────────────────────┘
 ```
 
 ## Then `location` picks the destination
@@ -116,7 +116,7 @@ Inside a matched `server` block, nginx looks at the **path** and picks a
 
 ```nginx
 server {
-    server_name vault.genetechsolutions.com;
+    server_name priv.genetechsolutions.com;
 
     location /api/ { proxy_pass http://127.0.0.1:8000; }   # the backend
     location /     { proxy_pass http://127.0.0.1:4173; }   # dist/staff
@@ -134,7 +134,7 @@ prefers the longest matching prefix, regardless of the order you write them in.
                              │
               ┌──────────────┴──────────────┐
               │                             │
-    vault.genetechsolutions.com   share.genetechsolutions.com
+    priv.genetech…               priv-req.genetech…
               │                             │
               └──────────────┬──────────────┘
                              │  both resolve to 66.51.159.115
@@ -144,8 +144,8 @@ prefers the longest matching prefix, regardless of the order you write them in.
               ║            :443 TLS          ║
               ╚══════════════════════════════╝
                     │           │         │
-      Host: vault.  │           │         │  Host: share.
-      path /        │           │         │  path /
+  Host: priv.│           │         │  Host: priv-req.
+  path /            │           │         │  path /
                     │           │         │
                     ▼           ▼         ▼
          ┌──────────────┐  ┌─────────┐  ┌──────────────┐
@@ -180,8 +180,8 @@ const res = await fetch(`/api${path}`, { credentials: 'same-origin', ... })
 
 A relative path means "same host I was loaded from". So:
 
-- a page loaded from `vault.` calls `https://vault.genetechsolutions.com/api/...`
-- a page loaded from `share.` calls `https://share.genetechsolutions.com/api/...`
+- a page loaded from `priv.` calls `https://priv.genetechsolutions.com/api/...`
+- a page loaded from `priv-req.` calls `https://priv-req.genetechsolutions.com/api/...`
 
 Both must reach the backend, so both blocks need the rule. And because the API
 appears to live on the same host as the page, **the browser considers it
@@ -216,12 +216,12 @@ certbot adds this in step 10. Port 80 answers everything with `301 Moved
 Permanently` pointing at the `https://` version of the same URL. One hop, then the
 browser never uses port 80 again for that host (HSTS).
 
-### 2. vault. → share. for a share link — **not a redirect at all**
+### 2. priv. → priv-req. for a share link — **not a redirect at all**
 
 This is the part that confuses everyone, so here it is precisely.
 
-An employee is on `https://vault.genetechsolutions.com/create`. They create a
-secret. The link that appears says `https://share.genetechsolutions.com/s/AbC123`.
+An employee is on `https://priv.genetechsolutions.com/create`. They create a
+secret. The link that appears says `https://priv-req.genetechsolutions.com/s/AbC123`.
 
 **Nothing redirected.** The backend *generated that text* from the
 `PUBLIC_BASE_URL` variable in `.env` ([Backend/routes_sender.py:108](Backend/routes_sender.py#L108)):
@@ -235,11 +235,11 @@ the employee to copy. No HTTP status code, no `Location` header, no browser
 navigation. It is a business card with an address printed on it.
 
 The client who receives that link opens it fresh, later, in their own browser, and
-*that* request goes to `share.` from the very beginning.
+*that* request goes to `priv-req.` from the very beginning.
 
 > **Consequence:** change `PUBLIC_BASE_URL` and every future link changes, with no
 > code edit and no nginx change. Get it wrong and links come out pointing at
-> `vault.` — which still works, but hands outside clients your internal hostname.
+> `priv.` — which still works, but hands outside clients your internal hostname.
 > **This is the single most important line in `.env` to check after deploying.**
 
 ### 3. HTTPSRedirectMiddleware — a backend safety net that can loop
@@ -284,10 +284,10 @@ At your DNS provider:
 
 | Type | Name | Value |
 |---|---|---|
-| A | `vault` | `66.51.159.115` |
+| A | `secure` | `66.51.159.115` |
 | A | `share` | `66.51.159.115` |
 
-Check from the server later with `dig +short vault.genetechsolutions.com`.
+Check from the server later with `dig +short priv.genetechsolutions.com`.
 
 ## Find your clone
 
@@ -371,7 +371,7 @@ wrong behaviour, not errors.
 
 These hold one line each. They are what tells the build which bundle to produce.
 
-> **If you skip these, both builds produce the PUBLIC bundle.** `vault.` would then
+> **If you skip these, both builds produce the PUBLIC bundle.** `priv.` would then
 > serve your employees the client page — with no login on it — and nothing
 > anywhere would report an error.
 
@@ -413,8 +413,8 @@ The values that matter most:
 | `WEBHOOK_SECRET` | random #3 | Signs outbound webhooks. |
 | `PASSWORD_PEPPER` | random #4 | **Set it now or never.** Mixed into every local password hash; adding it later invalidates every existing password. |
 | `AD_BIND_PASSWORD` | the real one | Copy from your laptop's `.env`. |
-| `PUBLIC_BASE_URL` | `https://share.genetechsolutions.com` | Every share link is built from this. |
-| `FRONTEND_ORIGIN` | `https://vault.genetechsolutions.com` | CORS and the CSRF origin check. |
+| `PUBLIC_BASE_URL` | `https://priv-req.genetechsolutions.com` | Every share link is built from this. |
+| `FRONTEND_ORIGIN` | `https://priv.genetechsolutions.com` | CORS and the CSRF origin check. |
 | `ALLOWED_HOSTS` | both hostnames + `backend` | A missing entry = bare `400 Invalid host header`, no log line. |
 
 Verify no placeholders survived:
@@ -516,47 +516,96 @@ Must show `ENV: production` and both of your real hostnames.
 
 ---
 
-# 5 — Tailscale — the route to the domain controller
+# 5 — Reaching the domain controller
 
-Your AD is at `192.168.11.49`. That is a private address: those packets cannot
-cross the internet. A US server sending to it hits its own local network or drops
-the packet. **This is not a firewall you can open** — the address has no meaning
-outside the Genetech LAN.
+The domain controller is **`DC01.genetech.pk` at `192.168.11.49`**, on the same
+LAN as this server (`192.168.11.114`). The backend reaches it directly over
+`ens160` — no gateway hop, sub-millisecond latency.
 
-## On any always-on Linux box inside the Genetech office
+**No Tailscale. No VPN. No tunnel.** This step used to be the hardest part of the
+deployment and it is now two checks.
 
-```bash
-curl -fsSL https://tailscale.com/install.sh | sh
-sudo tailscale up --advertise-routes=192.168.11.0/24
-```
+> ### ⚠️ `66.51.159.102` is NOT the domain controller
+>
+> That address was supplied for this at one point. It reverse-resolves to
+> **`mail.genetech.co`** and has no AD port open — all of 53, 88, 135, 139, 389,
+> 445, 464, 636, 3268 and 3269 time out. Verified 1 September 2026. Do not use it.
 
-Then **approve that route in the Tailscale admin console**. It does nothing until
-you click approve. This is the step people miss.
-
-## On the US server
-
-```bash
-curl -fsSL https://tailscale.com/install.sh | sudo sh
-sudo tailscale up --accept-routes
-tailscale status
-```
-
-## Verify — if this fails, nobody can sign in
+## Verify it is reachable — do this before deploying
 
 ```bash
 ping -c2 192.168.11.49
 openssl s_client -connect 192.168.11.49:636 -brief </dev/null
 ```
 
-> **Not ready yet?** You can deploy without AD and add it later. Set
-> `AD_ENABLED=false` in `.env` and use local accounts (step 11). Everything else
-> works identically. Just know which one you chose.
+The second command must complete a TLS handshake. If it hangs or is refused,
+LDAPS is not open from this host and no employee will be able to sign in — take
+it to IT before going further.
 
-Expect sign-ins to take **2–2.5 seconds** once it is working: each login makes
-about ten round trips to the DC, and Karachi↔US is roughly 250 ms each way.
-`AD_TIMEOUT=8` covers it.
+## What goes in `.env`
 
----
+Only the IP changed. Everything else is exactly what works today:
+
+```ini
+AD_ENABLED=true
+AD_HOST=DC01.genetech.pk          # the NAME — never the IP. See below.
+AD_IP=192.168.11.49               # on the same LAN as this server
+AD_PORT=636
+AD_TLS_MODE=ldaps
+AD_CA_CERT=/certs/genetech-ca.pem
+AD_BASE_DN=DC=genetech,DC=pk
+AD_NETBIOS=GENETECH
+AD_UPN_SUFFIX=genetech.pk
+AD_BIND_USER=dev01@genetech.pk
+AD_BIND_PASSWORD=<the real one>
+AD_REQUIRED_GROUP=CN=active-employee,OU=Groups,DC=genetech,DC=pk
+```
+
+> ### AD_HOST must stay a hostname
+>
+> The app **refuses to start** if you put the IP there
+> ([config.py:172](Backend/config.py#L172)):
+>
+> ```
+> AD_HOST is '192.168.11.49', an IP address, but TLS certificate validation
+> is on. Use the domain controller's hostname (the certificate's SAN)...
+> ```
+>
+> This is not fussiness. The DC's certificate is issued to its *name*, and TLS
+> validation compares against that name. `docker-compose.yml` bridges the two:
+>
+> ```yaml
+> extra_hosts:
+>   - "${AD_HOST:-DC01.genetech.pk}:${AD_IP:-192.168.11.49}"
+> ```
+>
+> So inside the container the name resolves to your IP, and the certificate
+> still validates. Set both variables and it works.
+
+## Confirm the name resolves inside the container
+
+After step 6 starts the backend:
+
+```bash
+dc exec backend python -c "import socket;print(socket.gethostbyname('DC01.genetech.pk'))"
+```
+
+Must print `192.168.11.49`. Anything else means `AD_IP` did not reach the
+container — check `.env` and re-run `dc up -d`.
+
+## Sign-in speed
+
+Previously the DC was in Karachi: ~250 ms per round trip, about ten trips per
+login, so 2 to 2.5 seconds. Same datacenter now, so logins are effectively
+instant.
+
+> ### Verified working
+>
+> The bind was confirmed on 1 September 2026: `manage.py export-ad-ca` connected
+> as `dev01@genetech.pk` and read `genetech-DC01-CA` out of the directory. The
+> DC's certificate carries `DC01.genetech.pk` as its only SAN and is valid until
+> 28 March 2027 — which is why `AD_HOST` must stay that hostname.
+
 
 # 6 — Start the backend (Docker)
 
@@ -701,8 +750,8 @@ You want exactly one entry: `secureshare -> /etc/nginx/sites-available/securesha
 
 ## If your hostnames differ
 
-`deploy/nginx.conf` has `vault.genetechsolutions.com` and
-`share.genetechsolutions.com` written in it. If yours differ:
+`deploy/nginx.conf` has `priv.genetechsolutions.com` and
+`priv-req.genetechsolutions.com` written in it. If yours differ:
 
 ```bash
 sudo nano /etc/nginx/sites-available/secureshare
@@ -740,8 +789,8 @@ sudo systemctl status nginx --no-pager
 ## Test it over plain HTTP before adding TLS
 
 ```bash
-curl -sI -H 'Host: vault.genetechsolutions.com' http://127.0.0.1/ | head -1
-curl -sI -H 'Host: share.genetechsolutions.com' http://127.0.0.1/ | head -1
+curl -sI -H 'Host: priv.genetechsolutions.com' http://127.0.0.1/ | head -1
+curl -sI -H 'Host: priv-req.genetechsolutions.com' http://127.0.0.1/ | head -1
 ```
 
 Both should return `200 OK`. You are faking the `Host` header with `-H` — exactly
@@ -764,8 +813,8 @@ fetching a file over port 80 from wherever it resolves — a stale record fails 
 challenge and eats your rate limit:
 
 ```bash
-dig +short vault.genetechsolutions.com
-dig +short share.genetechsolutions.com
+dig +short priv.genetechsolutions.com
+dig +short priv-req.genetechsolutions.com
 curl -s https://api.ipify.org; echo
 ```
 
@@ -775,8 +824,8 @@ Then, one command, one certificate covering both names:
 
 ```bash
 sudo certbot --nginx \
-  -d vault.genetechsolutions.com \
-  -d share.genetechsolutions.com \
+  -d priv.genetechsolutions.com \
+  -d priv-req.genetechsolutions.com \
   --agree-tos -m webadmin@genetech.co --redirect --non-interactive
 ```
 
@@ -850,17 +899,17 @@ DC or the tunnel is down, which is exactly when you want a credential-sharing to
 
 ```bash
 nmap -Pn -p 5432,6379,8000 66.51.159.115      # all filtered/closed
-curl -I http://share.genetechsolutions.com    # 301 → https
-curl -s https://vault.genetechsolutions.com/api/health
+curl -I http://priv-req.genetechsolutions.com    # 301 → https
+curl -s https://priv.genetechsolutions.com/api/health
 ```
 
 ## In a browser
 
-1. Sign in at `https://vault.genetechsolutions.com`. You land on `/create`.
-2. Create a secret. **The link must start with `https://share.`** — if it says
-   `vault.`, `PUBLIC_BASE_URL` in `.env` is wrong. Fix it and `dc up -d`.
+1. Sign in at `https://priv.genetechsolutions.com`. You land on `/create`.
+2. Create a secret. **The link must start with `https://priv-req.`** — if it says
+   `priv.`, `PUBLIC_BASE_URL` in `.env` is wrong. Fix it and `dc up -d`.
 3. Open that link in a private window: it reveals once. Open it again: already viewed.
-4. Go to `https://share.genetechsolutions.com/` — you must **not** find a login
+4. Go to `https://priv-req.genetechsolutions.com/` — you must **not** find a login
    page. The public bundle contains no staff code at all.
 5. Reboot and confirm everything returns unaided:
 
@@ -900,7 +949,6 @@ dc ps                       # backend, postgres, redis
 dc logs --tail 50 backend   # link tokens are redacted by design
 sudo nginx -t               # config valid?
 sudo certbot certificates   # expiry
-tailscale status            # the tunnel to the DC
 ```
 
 ## Backup
@@ -919,7 +967,7 @@ is a breach.
 ## Later: lock the staff door
 
 Once you know the office IP range, `deploy/nginx.conf` has a commented block that
-restricts `vault.` to it plus Tailscale. This is the control a single shared
+restricts `priv.` to it. This is the control a single shared
 hostname could not express — locking the internal app without locking out clients.
 
 ## Rotate the AD service account
@@ -936,7 +984,7 @@ is verified, have IT rotate it, put the new value only in the server's `.env`, r
 |---|---|
 | nginx site (real file) | `/etc/nginx/sites-available/secureshare` |
 | nginx site (live symlink) | `/etc/nginx/sites-enabled/secureshare` |
-| Certificates | `/etc/letsencrypt/live/vault.genetechsolutions.com/` |
+| Certificates | `/etc/letsencrypt/live/priv.genetechsolutions.com/` |
 | Secrets | `~/secureshare/.env` |
 | Build surface flags | `~/secureshare/Frontend/.env`, `.env.staff` |
 | Built bundles | `~/secureshare/Frontend/dist/{staff,public}` |
