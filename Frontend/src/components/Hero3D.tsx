@@ -1,106 +1,96 @@
-import { Suspense, useMemo, useRef } from 'react'
+import { Suspense, useEffect, useMemo, useRef } from 'react'
 import { Canvas, useFrame, type ThreeElements } from '@react-three/fiber'
-import { Float, PerspectiveCamera } from '@react-three/drei'
+import { Float, PerspectiveCamera, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 
 import { usePrefersReducedMotion } from './ui'
 import logoMark from '../../Assets/logo.png'
 
 /**
- * The Genetech speech-bubble mark, extruded into real geometry and lit like a
- * physical object — plus the binary bars from inside the logo, broken out and
- * left orbiting around it.
+ * The Genetech speech-bubble mark as a real modelled asset, lit like a physical
+ * object — plus binary bits left orbiting around it.
+ *
+ * The mark used to be BUILT here: a rounded rectangle drawn with THREE.Shape,
+ * extruded, with a separate wedge bolted on for the tail and three slanted bars
+ * laid on the face. It was an approximation of the logo and read as one. It is
+ * now public/models/bubble-cut.glb — the actual artwork, tail included, with
+ * the bars cut through the face.
  *
  * Cost control: one <Canvas>, DPR capped at 1.75, no post-processing, no
  * environment map (a CDN HDRI would violate the app's own CSP anyway). Under
  * prefers-reduced-motion the whole canvas is replaced by a static poster.
  */
 
-/** Rounded speech-bubble outline, drawn once and memoised. */
-function useBubbleGeometry() {
-  return useMemo(() => {
-    const w = 2.7
-    const h = 2.05
-    const r = 0.62
-    const x = -w / 2
-    const y = -h / 2
+/**
+ * The mark itself.
+ *
+ * Two meshes ("face" and "edge") carrying their own materials, so the brand red
+ * comes from the asset rather than being restated here. 2.6k triangles, 57 KB.
+ *
+ * Native size is 2.0 x 1.79 x 0.26 and it is already centred on the origin and
+ * extruded along Z, so it needs no offset or re-orientation — only a scale, to
+ * match the framing the old generated geometry had.
+ *
+ * glTF carries no shadow flags, so castShadow/receiveShadow have to be set on
+ * the meshes after load or the mark floats with nothing under it.
+ */
+const MODEL = '/models/bubble-cut.glb'
+const MODEL_SCALE = 1.35 // native width 2.0 -> 2.7, matching the previous mark
 
-    const s = new THREE.Shape()
-    s.moveTo(x + r, y)
-    s.lineTo(x + w - r, y)
-    s.quadraticCurveTo(x + w, y, x + w, y + r)
-    s.lineTo(x + w, y + h - r)
-    s.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
-    s.lineTo(x + r, y + h)
-    s.quadraticCurveTo(x, y + h, x, y + h - r)
-    s.lineTo(x, y + r)
-    s.quadraticCurveTo(x, y, x + r, y)
+/**
+ * Surface overrides, applied on top of the asset's own materials.
+ *
+ * The export ships face #C43B28 at roughness 0.42 / metalness 0, and edge
+ * #96281A at 0.38 / 0.25. That face is almost exactly the brand red already,
+ * but 0.42 roughness with no metalness is a MATTE surface: it scatters the key
+ * light instead of catching it, so the mark reads flat and dim next to the
+ * saturated headline. The generated geometry it replaced ran 0.28 / 0.22 and
+ * picked up a highlight along the top edge.
+ *
+ * So this is two changes, not one: a heavier red, and enough gloss for the
+ * lighting to actually land on it. The faint emissive stops the shadowed side
+ * going muddy brown, which is what a dark red does when it falls off to black.
+ *
+ * All tunable — these six numbers are the whole look.
+ */
+const FACE = { color: '#d8402c', roughness: 0.26, metalness: 0.18, emissive: '#2e0b06' }
+const EDGE = { color: '#a32a1b', roughness: 0.32, metalness: 0.3, emissive: '#1a0603' }
 
-    const geo = new THREE.ExtrudeGeometry(s, {
-      depth: 0.42,
-      bevelEnabled: true,
-      bevelThickness: 0.09,
-      bevelSize: 0.09,
-      bevelSegments: 6,
-      curveSegments: 24,
+function BubbleModel() {
+  const { scene } = useGLTF(MODEL)
+
+  // Clone so a second mount (e.g. React strict-mode double render) cannot
+  // mutate the cached original.
+  const model = useMemo(() => scene.clone(true), [scene])
+
+  useEffect(() => {
+    model.traverse((o) => {
+      const m = o as THREE.Mesh
+      if (!m.isMesh) return
+
+      // glTF carries no shadow flags; without these the mark floats with
+      // nothing under it.
+      m.castShadow = true
+      m.receiveShadow = true
+
+      // Object3D.clone() does NOT deep-copy materials — they stay shared with
+      // the instance useGLTF caches. Mutating them directly would leak this
+      // styling into every future mount of the model.
+      const src = m.material as THREE.MeshStandardMaterial
+      const spec = m.name === 'edge' ? EDGE : FACE
+      const mat = src.clone()
+      mat.color = new THREE.Color(spec.color)
+      mat.roughness = spec.roughness
+      mat.metalness = spec.metalness
+      mat.emissive = new THREE.Color(spec.emissive)
+      m.material = mat
     })
-    geo.center()
-    return geo
-  }, [])
+  }, [model])
+
+  return <primitive object={model} scale={MODEL_SCALE} />
 }
 
-/** The tail, as its own wedge so the outline stays a clean rounded rect. */
-function useTailGeometry() {
-  return useMemo(() => {
-    const t = new THREE.Shape()
-    t.moveTo(0, 0)
-    t.lineTo(0.62, 0.5)
-    t.lineTo(0.06, 0.72)
-    t.lineTo(0, 0)
-    const geo = new THREE.ExtrudeGeometry(t, {
-      depth: 0.42,
-      bevelEnabled: true,
-      bevelThickness: 0.06,
-      bevelSize: 0.06,
-      bevelSegments: 4,
-    })
-    geo.center()
-    return geo
-  }, [])
-}
-
-/** The three slanted binary bars that sit on the face of the real logo. */
-function BinaryBars() {
-  const rows = [
-    [-0.72, 0.42],
-    [-0.72, -0.02],
-    [-0.72, -0.46],
-  ]
-  return (
-    <group position={[0, 0, 0.3]}>
-      {rows.map(([bx, by], r) =>
-        [0, 1, 2].map((c) => {
-          const isOne = (r + c) % 2 === 0
-          return (
-            <mesh
-              key={`${r}-${c}`}
-              position={[bx + c * 0.72, by, 0]}
-              rotation={[0, 0, 0.32]}
-              castShadow
-            >
-              {isOne ? (
-                <boxGeometry args={[0.13, 0.46, 0.12]} />
-              ) : (
-                <torusGeometry args={[0.17, 0.062, 10, 22]} />
-              )}
-              <meshStandardMaterial color="#f6f9fa" roughness={0.35} metalness={0.05} />
-            </mesh>
-          )
-        }),
-      )}
-    </group>
-  )
-}
+useGLTF.preload(MODEL)
 
 /** Group that eases toward the pointer instead of snapping to it. */
 function PointerTilt(props: ThreeElements['group']) {
@@ -117,8 +107,6 @@ function PointerTilt(props: ThreeElements['group']) {
 }
 
 function Mark() {
-  const bubble = useBubbleGeometry()
-  const tail = useTailGeometry()
   const spin = useRef<THREE.Group>(null)
 
   useFrame((_, delta) => {
@@ -128,13 +116,7 @@ function Mark() {
   return (
     <PointerTilt>
       <group ref={spin}>
-        <mesh geometry={bubble} castShadow receiveShadow>
-          <meshStandardMaterial color="#c0392b" roughness={0.28} metalness={0.22} />
-        </mesh>
-        <mesh geometry={tail} position={[-1.15, -1.02, 0]} rotation={[0, 0, 3.5]} castShadow>
-          <meshStandardMaterial color="#c0392b" roughness={0.28} metalness={0.22} />
-        </mesh>
-        <BinaryBars />
+        <BubbleModel />
       </group>
     </PointerTilt>
   )

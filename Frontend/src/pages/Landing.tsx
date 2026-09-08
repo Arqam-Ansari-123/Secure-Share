@@ -50,7 +50,7 @@ export function Landing() {
           {/* Solid colour, not a gradient: "exactly once" is the product promise,
               and the red is doing semantic work here — it is the same red used
               for every destructive state in the app. */}
-          <h1 className="text-5xl font-extrabold tracking-tight sm:text-6xl lg:text-7xl">
+          <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
             Share a secret
             <br />
             <span className="text-brand-red-hot">exactly once.</span>
@@ -98,7 +98,7 @@ export function Landing() {
           )}
         </div>
 
-        <div className="relative h-[380px] sm:h-[460px] lg:h-[560px]">
+        <div className="relative h-[260px] sm:h-[420px] lg:h-[560px]">
           <Suspense
             fallback={
               <div className="flex h-full items-center justify-center">

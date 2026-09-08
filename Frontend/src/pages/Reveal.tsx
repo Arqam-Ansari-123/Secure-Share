@@ -4,7 +4,7 @@ import { AlertTriangle, Eye, EyeOff, Flame, Loader2, LockKeyhole, ShieldCheck } 
 
 import { api, ApiError, type SecretMeta } from '../lib/api'
 import { fromB64, makeVerifier, open as openEnvelope, type Opened } from '../lib/crypto'
-import { Button, CopyButton } from '../components/ui'
+import { Button, CopyButton, PasswordInput } from '../components/ui'
 
 type Phase = 'loading' | 'confirm' | 'passphrase' | 'opening' | 'open' | 'error'
 
@@ -171,15 +171,13 @@ export function Reveal() {
             <label htmlFor="pp" className="mb-2 block text-sm font-semibold">
               Passphrase required
             </label>
-            <input
+            <PasswordInput
               id="pp"
-              type="password"
               value={passphrase}
               onChange={(e) => setPassphrase(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && passphrase && void doReveal()}
               autoComplete="off"
               autoFocus
-              className="w-full rounded-xl border border-white/10 bg-ink-950/60 p-3 font-mono text-sm focus:border-brand-navy-lit focus:outline-none"
             />
             {meta && (
               <p className="mt-2 font-mono text-xs text-muted">

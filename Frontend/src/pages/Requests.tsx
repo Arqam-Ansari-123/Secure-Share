@@ -20,15 +20,7 @@ import { openWith } from '../lib/keys'
 import { currentPublicKey, needsPassword, privateKey, unlockWithPassword } from '../lib/vault'
 import { useAuth } from '../lib/auth'
 import { KeyMigration } from '../components/KeyMigration'
-import {
-  Button,
-  Countdown,
-  CopyButton,
-  Pager,
-  StatusPill,
-  usePaged,
-  usePrefersReducedMotion,
-} from '../components/ui'
+import { Button, CopyButton, Countdown, Pager, PasswordInput, StatusPill, usePaged, usePrefersReducedMotion } from '../components/ui'
 
 /** Four cards is about a screenful. The list arrives whole either way — the
  *  server already caps it at 200 — so this only changes what is rendered. */
@@ -216,14 +208,13 @@ export function Requests() {
               so it is not left sitting in a browser for a month. Enter your password to read
               replies. Sending secrets and creating requests work without this.
             </p>
-            <input
+            <PasswordInput
               ref={pwRef}
-              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
               placeholder="Your password"
-              className="w-full max-w-sm rounded-xl border border-white/10 bg-ink-950/60 p-3 font-mono text-sm focus:border-brand-navy-lit focus:outline-none"
+              wrapperClassName="max-w-sm"
             />
           </div>
           <Button type="submit" disabled={!password}>

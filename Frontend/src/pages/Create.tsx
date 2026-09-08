@@ -5,7 +5,7 @@ import { AlertTriangle, Loader2 } from 'lucide-react'
 import { ApiError } from '../lib/http'
 import { staffApi } from '../lib/api-staff'
 import { seal } from '../lib/crypto'
-import { Button, SectionTitle } from '../components/ui'
+import { Button, PasswordInput, SectionTitle } from '../components/ui'
 
 const EXPIRY = [
   { id: 'view', label: 'One view', hint: 'burns on first open' },
@@ -17,6 +17,24 @@ const EXPIRY = [
 // Mirrors MAX_BLOB_BYTES on the server. Applies to the ENCRYPTED payload, so a
 // long enough pasted body can still reach it.
 const MAX_BYTES = 5 * 1024 * 1024
+
+/**
+ * Minimum length for the optional passphrase.
+ *
+ * This HAS to be enforced here, in the browser, and cannot be checked on the
+ * server: the passphrase never leaves this page. It is stretched into a key
+ * locally and the server only ever receives a verifier derived from it, which
+ * is the whole point of the zero-knowledge design. So there is no server-side
+ * length check to fall back on -- if this is missing, a one-character
+ * passphrase is accepted, which is what QA found.
+ *
+ * 8 rather than the 12 used for staff account passwords (config.MIN_PASSWORD_
+ * LENGTH). An account password guards a login for months; this guards one
+ * secret for its TTL, is delivered out of band, and online guessing is already
+ * capped by the reveal_tid rate limit and by max_attempts destroying the secret
+ * outright. 12 here would push people towards not setting one at all.
+ */
+const MIN_PASSPHRASE = 8
 
 export function Create() {
   const nav = useNavigate()
@@ -35,6 +53,11 @@ export function Create() {
     e.preventDefault()
     if (!text.trim()) {
       setError('Enter a secret to share.')
+      return
+    }
+    // Optional -- but once set, it has to be worth something.
+    if (passphrase && passphrase.length < MIN_PASSPHRASE) {
+      setError(`Passphrase must be at least ${MIN_PASSPHRASE} characters, or left empty.`)
       return
     }
     setBusy(true)
@@ -147,15 +170,31 @@ export function Create() {
               <label htmlFor="pass" className="mb-2 block text-sm font-semibold">
                 Passphrase <span className="font-normal text-muted">(optional)</span>
               </label>
-              <input
+              <PasswordInput
                 id="pass"
-                type="password"
                 value={passphrase}
                 onChange={(e) => setPassphrase(e.target.value)}
                 autoComplete="new-password"
                 placeholder="Send this by a different channel"
-                className="w-full rounded-xl border border-white/10 bg-ink-950/60 p-3 font-mono text-sm focus:border-brand-navy-lit focus:outline-none"
+                aria-describedby="pass-hint"
+                minLength={MIN_PASSPHRASE}
               />
+              {/* Live feedback, so the length rule is discovered while typing
+                  rather than at submit. */}
+              <p
+                id="pass-hint"
+                className={`mt-2 text-xs ${
+                  passphrase && passphrase.length < MIN_PASSPHRASE
+                    ? 'text-red-300'
+                    : 'text-muted'
+                }`}
+              >
+                {passphrase && passphrase.length < MIN_PASSPHRASE
+                  ? `${MIN_PASSPHRASE - passphrase.length} more character${
+                      MIN_PASSPHRASE - passphrase.length === 1 ? '' : 's'
+                    } needed`
+                  : `Leave empty for no passphrase, or use at least ${MIN_PASSPHRASE} characters.`}
+              </p>
             </div>
 
             {passphrase && (
@@ -224,7 +263,12 @@ export function Create() {
             </p>
           )}
 
-          <Button type="submit" variant="danger" disabled={busy} className="w-full">
+          <Button
+            type="submit"
+            variant="danger"
+            disabled={busy || (Boolean(passphrase) && passphrase.length < MIN_PASSPHRASE)}
+            className="w-full"
+          >
             {busy ? (
               <span className="flex items-center justify-center gap-2">
                 <Loader2 size={15} className="animate-spin" /> Encrypting...

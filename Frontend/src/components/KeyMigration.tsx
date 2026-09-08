@@ -3,7 +3,7 @@ import { AlertTriangle, KeyRound, Loader2 } from 'lucide-react'
 
 import { useAuth } from '../lib/auth'
 import { abandonKey, migrateKey } from '../lib/vault'
-import { Button } from './ui'
+import { Button, PasswordInput } from './ui'
 
 /**
  * Shown when the stored private key will not open with the password just used.
@@ -65,13 +65,12 @@ export function KeyMigration() {
             <label htmlFor="oldpw" className="mb-2 block text-xs font-semibold text-muted">
               Your previous password
             </label>
-            <input
+            <PasswordInput
               id="oldpw"
-              type="password"
               value={oldPassword}
               onChange={(e) => setOldPassword(e.target.value)}
               autoComplete="off"
-              className="w-full max-w-sm rounded-xl border border-white/10 bg-ink-950/60 p-3 font-mono text-sm focus:border-brand-navy-lit focus:outline-none"
+              wrapperClassName="max-w-sm"
             />
           </div>
           <Button type="submit" disabled={busy || !oldPassword}>

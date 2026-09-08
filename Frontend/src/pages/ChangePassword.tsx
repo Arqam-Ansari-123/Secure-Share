@@ -7,7 +7,7 @@ import { staffApi, type WrappedKeys } from '../lib/api-staff'
 import { rewrap } from '../lib/keys'
 import { unlock } from '../lib/vault'
 import { useAuth } from '../lib/auth'
-import { Button } from '../components/ui'
+import { Button, PasswordInput } from '../components/ui'
 
 export function ChangePassword() {
   const { user, refresh } = useAuth()
@@ -94,14 +94,13 @@ export function ChangePassword() {
             <label htmlFor={f.id} className="mb-2 block text-sm font-semibold">
               {f.label}
             </label>
-            <input
+            <PasswordInput
               id={f.id}
-              type="password"
               value={f.v}
               onChange={(e) => f.set(e.target.value)}
               autoComplete={f.ac}
               required
-              className="mb-4 w-full rounded-xl border border-white/10 bg-ink-950/60 p-3 font-mono text-sm focus:border-brand-navy-lit focus:outline-none"
+              wrapperClassName="mb-4"
             />
           </div>
         ))}

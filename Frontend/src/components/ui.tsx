@@ -1,5 +1,71 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Check, ChevronLeft, ChevronRight, Copy } from 'lucide-react'
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type Ref,
+} from 'react'
+import { Check, ChevronLeft, ChevronRight, Copy, Eye, EyeOff } from 'lucide-react'
+
+/**
+ * A password field with a reveal toggle that works in EVERY browser.
+ *
+ * The bug this fixes: Edge injects its own eye button into password inputs via
+ * `::-ms-reveal`. Chrome, Firefox and Safari inject nothing at all. So the app
+ * appeared to have a working show/hide control when tested in Edge and none
+ * anywhere else. index.css now suppresses Edge's native control, and this
+ * component supplies the real one.
+ *
+ * Notes:
+ *  - The toggle is `tabIndex={-1}`. Tabbing out of a password field should go to
+ *    the submit button, not detour through a decoration. It stays reachable by
+ *    click and by screen readers via aria-label.
+ *  - `type="button"` is load-bearing: the default inside a <form> is "submit",
+ *    so without it, revealing the password would submit the form.
+ *  - Right padding is reserved on the input so a long value cannot slide under
+ *    the button.
+ */
+export function PasswordInput({
+  className = '',
+  wrapperClassName = '',
+  ref,
+  ...props
+}: Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & {
+  /** Width/spacing for the wrapper. Put `max-w-sm` here, NOT on className —
+   *  the toggle is positioned against the wrapper, so constraining the input
+   *  alone would leave the button floating away from the field. */
+  wrapperClassName?: string
+  /** React 19 passes ref as an ordinary prop; no forwardRef needed. */
+  ref?: Ref<HTMLInputElement>
+}) {
+  const [shown, setShown] = useState(false)
+  const reactId = useId()
+  const id = props.id ?? reactId
+
+  return (
+    <div className={`relative ${wrapperClassName}`}>
+      <input
+        {...props}
+        ref={ref}
+        id={id}
+        type={shown ? 'text' : 'password'}
+        className={`w-full rounded-xl border border-white/10 bg-ink-950/60 p-3 pr-12 font-mono text-sm focus:border-brand-navy-lit focus:outline-none ${className}`}
+      />
+      <button
+        type="button"
+        tabIndex={-1}
+        onClick={() => setShown((v) => !v)}
+        aria-label={shown ? 'Hide password' : 'Show password'}
+        aria-pressed={shown}
+        className="absolute top-1/2 right-1 flex h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-lg text-muted transition hover:bg-white/8 hover:text-paper focus-visible:ring-2 focus-visible:ring-brand-navy-lit focus-visible:outline-none"
+      >
+        {shown ? <EyeOff size={16} /> : <Eye size={16} />}
+      </button>
+    </div>
+  )
+}
 
 /** Primary action. Petrol by default; `danger` for anything destructive. */
 export function Button({

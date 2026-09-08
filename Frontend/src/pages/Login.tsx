@@ -4,7 +4,7 @@ import { Loader2, LogIn, ShieldCheck } from 'lucide-react'
 
 import { ApiError } from '../lib/http'
 import { useAuth } from '../lib/auth'
-import { Button } from '../components/ui'
+import { Button, PasswordInput } from '../components/ui'
 
 export function Login() {
   const { login } = useAuth()
@@ -81,16 +81,15 @@ export function Login() {
         <label htmlFor="pw" className="mb-2 block text-sm font-semibold">
           Password
         </label>
-        <input
+        <PasswordInput
           id="pw"
-          type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           // A password manager is welcome here, unlike on the secret field where
           // autofill would be actively harmful.
           autoComplete="current-password"
           required
-          className="mb-5 w-full rounded-xl border border-white/10 bg-ink-950/60 p-3 font-mono text-sm focus:border-brand-navy-lit focus:outline-none"
+          wrapperClassName="mb-5"
         />
 
         {error && (

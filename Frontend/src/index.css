@@ -94,12 +94,48 @@ body {
   border: 1px solid color-mix(in oklab, white 9%, transparent);
 }
 
+/* Sits behind a sticky header and blurs whatever scrolls beneath it.
+   The floating nav is a rounded pill with a margin above it, so without this
+   the page content slides through that transparent gap perfectly crisp and
+   collides with the header visually. The mask fades the blur out downward so
+   there is no hard edge where it ends.
+
+   Both properties are prefixed: Safari still needs -webkit- for mask-image,
+   and every WebKit browser needs it for backdrop-filter. */
+@utility header-scrim {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  mask-image: linear-gradient(to bottom, black 0%, black 62%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, black 62%, transparent 100%);
+}
+
 @utility card {
   @apply glass;
   border-radius: 1rem;
   box-shadow:
     0 1px 0 0 color-mix(in oklab, white 6%, transparent) inset,
     0 24px 60px -24px rgb(0 0 0 / 0.7);
+}
+
+/* An OPAQUE floating panel, for menus that overlay page content.
+   
+   Deliberately NOT `card`/`glass`. Those are 4% white and rely entirely on
+   backdrop-filter, which silently fails here: both dropdowns render inside the
+   .glass header pill, and an ancestor with backdrop-filter establishes a
+   backdrop root -- a descendant's own backdrop-filter then samples only that
+   ancestor's already-filtered layer instead of the page behind it. The blur
+   does nothing and the menu reads as transparent, with the hero text showing
+   straight through it.
+   
+   A solid background is the fix. Glass is for surfaces that sit IN the page;
+   this is for surfaces that sit OVER it. */
+@utility menu-panel {
+  background: var(--color-ink-800);
+  border: 1px solid color-mix(in oklab, white 10%, transparent);
+  border-radius: 1rem;
+  box-shadow:
+    0 1px 0 0 color-mix(in oklab, white 7%, transparent) inset,
+    0 24px 60px -20px rgb(0 0 0 / 0.85);
 }
 
 /* The aurora that sits behind the whole app. Two brand-colored blooms drifting
@@ -145,4 +181,18 @@ body {
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+
+/* --- password fields ------------------------------------------------------
+   Edge (and old IE) inject their own reveal button into every <input
+   type="password"> via ::-ms-reveal. Chrome, Firefox and Safari inject
+   nothing. That asymmetry is why the eye icon appeared only in Edge.
+
+   PasswordInput in components/ui.tsx now supplies one toggle that works
+   everywhere, so Edge's native control has to go or that browser shows two
+   icons side by side. -ms-clear removes the matching "X" button. */
+input[type='password']::-ms-reveal,
+input[type='password']::-ms-clear {
+  display: none;
 }

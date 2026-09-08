@@ -1,24 +1,30 @@
 import { useCallback, useState, type ReactNode } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { ChevronDown, KeyRound, LogOut, MonitorSmartphone, ShieldCheck } from 'lucide-react'
+import {
+  ChevronDown,
+  KeyRound,
+  LogOut,
+  Menu,
+  MonitorSmartphone,
+  ShieldCheck,
+  X,
+} from 'lucide-react'
 
 import { useDismissOnOutside } from './ui'
 import { useAuth } from '../lib/auth'
-// Two problems with the original `logo with name.png`, both fixed in the asset
-// rather than in CSS:
+// SVG, not PNG. The raster wordmark was only 375x134 — at the 44px header size
+// that is exactly at the limit for a 3x display, and the public header rendered
+// it at 56px, i.e. upscaled and visibly soft. A vector has no such ceiling.
 //
-//  1. It is a 447x447 SQUARE canvas holding a 375x134 wordmark, so 70% of its
-//     height was transparent padding — at h-8 the lettering rendered under 10px
-//     tall. logo-wordmark.png is the same artwork cropped to its content.
+// The `-dark` variant is the supplied brand SVG with the wordmark lettering
+// recoloured to paper white for our dark surfaces. The brand red (#C53B27) is
+// untouched. It is a real recolour in the asset, NOT a CSS filter: `invert()`
+// was tried once and it does not lighten a logo, it rotates every hue — navy
+// came out peach and the brand red came out CYAN. So NO filter belongs on this.
 //
-//  2. It is drawn in Genetech navy for a light page. The old fix here was
-//     `invert-[0.92] brightness-125`, but inverting does not lighten a logo, it
-//     rotates every hue: navy #104a68 came out pale peach and the brand red came
-//     out CYAN. logo-wordmark-dark.png is a proper reversed lockup — white
-//     wordmark, brand red #b93e2e untouched — so NO filter belongs on it.
-//
-// Both originals are still in Assets/ for light-background use.
-import logoWithName from '../../Assets/logo-wordmark-dark.png'
+// `GenetechSolutions Logo.svg` (navy wordmark) stays in Assets/ for light
+// backgrounds, along with the old PNGs.
+import logoWithName from '../../Assets/genetech-wordmark-dark.svg'
 import logoMark from '../../Assets/logo.png'
 
 const NAV = [
@@ -43,12 +49,19 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { user, logout, logoutAll } = useAuth()
   const nav = useNavigate()
   const [open, setOpen] = useState(false)
+  const [navOpen, setNavOpen] = useState(false)
 
   // useCallback so the hook's effect does not tear down and re-subscribe on
   // every render of the shell.
   const close = useCallback(() => setOpen(false), [])
+  const closeNav = useCallback(() => setNavOpen(false), [])
   // Wraps the trigger AND the panel, so clicking the trigger is "inside".
   const menuRef = useDismissOnOutside<HTMLDivElement>(open, close)
+  const navRef = useDismissOnOutside<HTMLDivElement>(navOpen, closeNav)
+
+  // Built once and rendered twice -- inline on desktop, in the drawer on
+  // mobile -- so the two can never drift apart.
+  const links = [...NAV, ...(user?.is_admin ? ADMIN_NAV : [])]
 
   async function signOut(everywhere: boolean) {
     setOpen(false)
@@ -61,19 +74,25 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="aurora" aria-hidden />
 
       <header className="sticky top-0 z-50">
-        <div className="glass mx-auto mt-4 flex max-w-6xl items-center justify-between rounded-2xl px-4 py-3 sm:px-6">
+        {/* The nav is a floating pill with a margin above it, so without this
+            the page scrolls through that gap perfectly sharp and appears to
+            collide with the header. Extends past the pill and fades out. */}
+        <div
+          className="header-scrim pointer-events-none absolute inset-x-0 top-0 h-[calc(100%+1.25rem)]"
+          aria-hidden
+        />
+        <div className="glass relative mx-auto mt-4 flex max-w-6xl items-center justify-between rounded-2xl px-3 py-2.5 sm:px-6 sm:py-3">
           {/* Standard convention: the wordmark goes home, not to the app.
               Home is /home because / now opens straight onto /create. */}
           <Link to="/home" className="flex items-center gap-3" aria-label="SecureShare home">
             {/* Cropped, the wordmark is 2.8:1 rather than square, so it is much
-                WIDER at a given height than the old padded asset. Stepped up at
-                the sm breakpoint because the nav links share this row and have
-                no mobile menu to collapse into. Both steps are >3x the old
-                legible size. */}
+                WIDER at a given height than the old padded asset. The nav now
+                collapses into a drawer below md, so this no longer has to share
+                the row with five links on a phone. */}
             <img
               src={logoWithName}
               alt="Genetech Solutions"
-              className="h-9 w-auto sm:h-11"
+              className="h-9 w-auto sm:h-12"
             />
             <span className="hidden h-5 w-px bg-white/15 sm:block" aria-hidden />
             <span className="hidden font-mono text-xs tracking-[0.18em] text-muted uppercase sm:block">
@@ -82,8 +101,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
 
           <div className="flex items-center gap-1">
-            <nav className="flex items-center gap-1">
-              {[...NAV, ...(user?.is_admin ? ADMIN_NAV : [])].map((n) => (
+            {/* Desktop: inline. Five links plus the wordmark and the account
+                button need ~640px, so below md they move into the drawer. */}
+            <nav className="hidden items-center gap-1 md:flex">
+              {links.map((n) => (
                 <NavLink
                   key={n.to}
                   to={n.to}
@@ -97,6 +118,42 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </NavLink>
               ))}
             </nav>
+
+            {/* Mobile: the same links in a dropdown. */}
+            <div className="relative md:hidden" ref={navRef}>
+              <button
+                type="button"
+                onClick={() => setNavOpen((o) => !o)}
+                className="flex cursor-pointer items-center justify-center rounded-lg p-2 text-muted transition hover:bg-white/6 hover:text-paper"
+                aria-expanded={navOpen}
+                aria-haspopup="menu"
+                aria-label={navOpen ? 'Close menu' : 'Open menu'}
+              >
+                {navOpen ? <X size={20} /> : <Menu size={20} />}
+              </button>
+
+              {navOpen && (
+                <div role="menu" className="menu-panel absolute right-0 mt-2 w-52 overflow-hidden p-1.5 text-sm">
+                  {links.map((n) => (
+                    <NavLink
+                      key={n.to}
+                      to={n.to}
+                      role="menuitem"
+                      onClick={closeNav}
+                      className={({ isActive }) =>
+                        `block rounded-lg px-3 py-2.5 font-semibold transition ${
+                          isActive
+                            ? 'bg-white/10 text-paper'
+                            : 'text-muted hover:bg-white/6 hover:text-paper'
+                        }`
+                      }
+                    >
+                      {n.label}
+                    </NavLink>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {user && (
               <div className="relative ml-1" ref={menuRef}>
@@ -123,7 +180,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 {open && (
                   <div
                     role="menu"
-                    className="card absolute right-0 mt-2 w-60 overflow-hidden p-1.5 text-sm"
+                    className="menu-panel absolute right-0 mt-2 w-60 max-w-[calc(100vw-1.5rem)] overflow-hidden p-1.5 text-sm"
                   >
                     <p className="px-3 py-2 font-mono text-xs break-all text-muted">{user.email}</p>
                     {/* An AD user's password lives in the domain; the local
