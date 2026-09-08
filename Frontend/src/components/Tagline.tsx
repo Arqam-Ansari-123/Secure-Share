@@ -69,7 +69,7 @@ export function Tagline() {
   // Reduced motion: no animation, no cycling — just the primary line.
   if (reduced) {
     return (
-      <p className="text-xl font-semibold text-paper/90 sm:text-2xl">
+      <p className="text-lg font-semibold text-paper/90 sm:text-2xl">
         {LINES[0]}
       </p>
     )
@@ -78,7 +78,7 @@ export function Tagline() {
   return (
     <div
       ref={host}
-      className="flex min-h-[2.5rem] items-center text-xl font-semibold sm:min-h-[3rem] sm:text-2xl"
+      className="flex min-h-[2.5rem] items-center text-lg font-semibold sm:min-h-[3rem] sm:text-2xl"
       style={{ perspective: '600px' }}
       aria-label={LINES[0]}
     >

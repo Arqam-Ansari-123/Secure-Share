@@ -41,7 +41,14 @@ export function Landing() {
     <>
       {/* ---------------------------------------------------------------- hero */}
       <section className="mx-auto grid w-full max-w-6xl items-center gap-8 px-4 pt-10 pb-20 sm:px-6 lg:grid-cols-2 lg:gap-4 lg:pt-16">
-        <div>
+        {/* min-w-0 is load-bearing. A grid item defaults to min-width:auto, so
+            it refuses to shrink below its widest unbreakable child -- here the
+            Tagline, whose line is an inline-block and therefore one rigid unit
+            as wide as the whole string. That pushed this column past the
+            viewport and clipped the paragraph off the right edge. It was always
+            broken; content-sized buttons just hid it until they went full
+            width. */}
+        <div className="min-w-0">
           <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 font-mono text-xs tracking-widest text-muted uppercase">
             <span className="h-1.5 w-1.5 rounded-full bg-brand-red" aria-hidden />
             Genetech Solutions
