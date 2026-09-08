@@ -67,6 +67,65 @@ export function PasswordInput({
   )
 }
 
+/**
+ * Renders plain text, turning http(s) URLs into clickable links.
+ *
+ * A recipient is often sent a credential together with the address it belongs
+ * to, and having to select-and-paste that by hand is a poor end to the flow.
+ *
+ * Three things here are security decisions, not styling:
+ *
+ *  1. NO dangerouslySetInnerHTML. The nodes are built as React children, so the
+ *     text is escaped by React and a secret containing markup cannot execute.
+ *     This content is attacker-supplied in the sense that it came from outside
+ *     our system and we decrypted it locally.
+ *
+ *  2. Only http:// and https:// are matched. The regex cannot produce a
+ *     `javascript:` or `data:` href, so a crafted secret cannot turn into a
+ *     script link.
+ *
+ *  3. rel="noreferrer" is LOAD-BEARING on the reveal page. That page's own URL
+ *     is /s/<token>, and the token is half the credential. Without noreferrer
+ *     the browser would hand that token to whatever third-party site the
+ *     recipient clicks through to, in the Referer header. (The decryption key
+ *     lives in the #fragment, which browsers never transmit, but the token
+ *     alone is worth protecting.) target="_blank" also keeps the reader on the
+ *     page -- navigating away from a one-time secret that has already been
+ *     burned means losing it.
+ */
+const URL_RE = /https?:\/\/[^\s<>"'`]+/gi
+
+export function Linkify({ text }: { text: string }) {
+  const out: ReactNode[] = []
+  let last = 0
+  let key = 0
+
+  for (const m of text.matchAll(URL_RE)) {
+    const raw = m[0]
+    const start = m.index
+    // Trailing punctuation is nearly always sentence structure, not the URL.
+    const url = raw.replace(/[.,;:!?)\]}'"]+$/, '')
+
+    if (start > last) out.push(text.slice(last, start))
+    out.push(
+      <a
+        key={key++}
+        href={url}
+        target="_blank"
+        rel="noreferrer noopener nofollow"
+        className="text-brand-red-hot underline decoration-brand-red/50 underline-offset-2 hover:decoration-brand-red-hot"
+      >
+        {url}
+      </a>,
+    )
+    if (url.length < raw.length) out.push(raw.slice(url.length))
+    last = start + raw.length
+  }
+  if (last < text.length) out.push(text.slice(last))
+
+  return <>{out}</>
+}
+
 /** Primary action. Petrol by default; `danger` for anything destructive. */
 export function Button({
   children,

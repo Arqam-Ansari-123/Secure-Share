@@ -20,7 +20,7 @@ import { openWith } from '../lib/keys'
 import { currentPublicKey, needsPassword, privateKey, unlockWithPassword } from '../lib/vault'
 import { useAuth } from '../lib/auth'
 import { KeyMigration } from '../components/KeyMigration'
-import { Button, CopyButton, Countdown, Pager, PasswordInput, StatusPill, usePaged, usePrefersReducedMotion } from '../components/ui'
+import { Button, CopyButton, Countdown, Linkify, Pager, PasswordInput, StatusPill, usePaged, usePrefersReducedMotion } from '../components/ui'
 
 /** Four cards is about a screenful. The list arrives whole either way — the
  *  server already caps it at 200 — so this only changes what is rendered. */
@@ -364,7 +364,7 @@ export function Requests() {
                       masked[r.rid] ? 'blur-[7px] select-none' : ''
                     }`}
                   >
-                    {opened[r.rid]}
+                    <Linkify text={opened[r.rid]} />
                   </pre>
                   <p className="mt-2 text-xs text-muted">
                     Copy this now — it is gone from our servers and will not load again.

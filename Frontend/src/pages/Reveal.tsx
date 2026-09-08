@@ -4,7 +4,7 @@ import { AlertTriangle, Eye, EyeOff, Flame, Loader2, LockKeyhole, ShieldCheck } 
 
 import { api, ApiError, type SecretMeta } from '../lib/api'
 import { fromB64, makeVerifier, open as openEnvelope, type Opened } from '../lib/crypto'
-import { Button, CopyButton, PasswordInput } from '../components/ui'
+import { Button, CopyButton, Linkify, PasswordInput } from '../components/ui'
 
 type Phase = 'loading' | 'confirm' | 'passphrase' | 'opening' | 'open' | 'error'
 
@@ -133,12 +133,15 @@ export function Reveal() {
                 <CopyButton value={opened.text} />
               </div>
             </div>
+            {/* pointer-events-none while masked: the text is blurred for
+                shoulder-surfing, so a link under it should not be clickable
+                either. */}
             <pre
               className={`overflow-x-auto rounded-xl bg-ink-950/70 p-4 font-mono text-sm break-all whitespace-pre-wrap transition ${
-                masked ? 'blur-[7px] select-none' : ''
+                masked ? 'pointer-events-none blur-[7px] select-none' : ''
               }`}
             >
-              {opened.text}
+              <Linkify text={opened.text} />
             </pre>
           </div>
         )}
