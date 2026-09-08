@@ -71,18 +71,21 @@ export function Landing() {
               hostname into a bundle every client downloads. STAFF is a
               build-time constant, so the branch not taken is removed entirely
               and the client never receives these links. */}
+          {/* Column + stretch on mobile so both CTAs are the SAME width and fill
+              the measure; they were inline-flex in a wrap row, so each sized to
+              its own label and they landed ragged. Row again from sm up. */}
           {STAFF ? (
-            <div className="mt-9 flex flex-wrap items-center gap-3">
+            <div className="mt-9 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               <Link
                 to="/create"
-                className="group inline-flex cursor-pointer items-center gap-2 rounded-xl bg-brand-red px-6 py-3.5 font-semibold text-white shadow-[0_16px_40px_-16px] shadow-brand-red transition hover:bg-brand-red-hot"
+                className="group inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-brand-red px-6 py-3.5 font-semibold text-white shadow-[0_16px_40px_-16px] shadow-brand-red transition hover:bg-brand-red-hot"
               >
                 Create a secret
                 <ArrowRight size={17} className="transition-transform group-hover:translate-x-1" />
               </Link>
               <Link
                 to="/dashboard"
-                className="glass inline-flex cursor-pointer items-center gap-2 rounded-xl px-6 py-3.5 font-semibold transition hover:bg-white/10"
+                className="glass inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl px-6 py-3.5 font-semibold transition hover:bg-white/10"
               >
                 View my secrets
               </Link>

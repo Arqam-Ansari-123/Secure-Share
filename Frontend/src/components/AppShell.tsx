@@ -234,9 +234,23 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <footer className="mx-auto mt-16 w-full max-w-6xl px-4 pb-10 sm:px-6">
         <div className="flex flex-col items-center gap-4 border-t border-white/8 pt-8 text-sm text-muted sm:flex-row sm:justify-between">
-          <div className="flex items-center gap-3">
-            <img src={logoMark} alt="" className="h-6 w-6" aria-hidden />
-            <span>SecureShare — Genetech Solutions internal</span>
+          {/* text-center matters on mobile: the string wraps to two lines, and
+              without it the wrapped half sits ragged-left against a centred
+              container. Reverts to left once it fits on one line. */}
+          <div className="flex items-center gap-3 text-center sm:text-left">
+            <img src={logoMark} alt="" className="h-6 w-6 shrink-0" aria-hidden />
+            <span>
+              SecureShare —{' '}
+              <a
+                href="https://www.genetechsolutions.com/"
+                target="_blank"
+                rel="noreferrer noopener"
+                className="text-paper underline decoration-brand-red/60 underline-offset-4 transition hover:decoration-brand-red"
+              >
+                Genetech Solutions
+              </a>{' '}
+              internal
+            </span>
           </div>
           <p className="flex items-center gap-2 font-mono text-xs">
             <ShieldCheck size={13} /> Encrypted in your browser
