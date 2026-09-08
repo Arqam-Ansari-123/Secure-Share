@@ -87,10 +87,16 @@ body {
 
 /* --- reusable surfaces --------------------------------------------------- */
 
+/* NO hand-written -webkit- prefixes here, deliberately.
+   Lightning CSS (Vite's minifier) adds vendor prefixes from the build targets.
+   Writing the pair by hand makes it collapse them and emit ONLY the -webkit-
+   version -- which silently drops the standard property, so Firefox, which
+   supports backdrop-filter unprefixed and does NOT understand
+   -webkit-backdrop-filter, got no blur at all. Write the standard property and
+   let the build prefix it. */
 @utility glass {
   background: color-mix(in oklab, white 4%, transparent);
   backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
   border: 1px solid color-mix(in oklab, white 9%, transparent);
 }
 
@@ -100,13 +106,10 @@ body {
    collides with the header visually. The mask fades the blur out downward so
    there is no hard edge where it ends.
 
-   Both properties are prefixed: Safari still needs -webkit- for mask-image,
-   and every WebKit browser needs it for backdrop-filter. */
+   Prefixes are NOT written by hand -- see the note on `glass` above. */
 @utility header-scrim {
   backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   mask-image: linear-gradient(to bottom, black 0%, black 62%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, black 0%, black 62%, transparent 100%);
 }
 
 @utility card {
