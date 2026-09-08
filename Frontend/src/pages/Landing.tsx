@@ -63,7 +63,12 @@ export function Landing() {
             <span className="text-brand-red-hot">exactly once.</span>
           </h1>
 
-          <div className="mt-6 h-14">
+          {/* overflow-hidden is a guard, not decoration. Tagline renders its
+              line inside a display:inline-block span, which is one rigid
+              unbreakable unit -- if a longer line is ever added to LINES it
+              would push this column wider than the phone again. Clipping is a
+              far better failure than dragging the whole hero off-screen. */}
+          <div className="mt-6 h-14 w-full min-w-0 overflow-hidden">
             <Tagline />
           </div>
 
