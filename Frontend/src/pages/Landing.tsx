@@ -108,7 +108,10 @@ export function Landing() {
           )}
         </div>
 
-        <div className="relative h-[260px] sm:h-[420px] lg:h-[560px]">
+        {/* my-6 below sm only. In the single-column stack the canvas butts
+            straight up against the CTAs above and the next section below;
+            from sm up the grid gap already handles the spacing. */}
+        <div className="relative my-6 h-[260px] sm:my-0 sm:h-[420px] lg:h-[560px]">
           <Suspense
             fallback={
               <div className="flex h-full items-center justify-center">

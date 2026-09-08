@@ -237,7 +237,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           {/* text-center matters on mobile: the string wraps to two lines, and
               without it the wrapped half sits ragged-left against a centred
               container. Reverts to left once it fits on one line. */}
-          <div className="flex items-center gap-3 text-center sm:text-left">
+          {/* Column on mobile. Side by side, the text wraps to two lines and the
+              mark ends up vertically centred against that block -- it reads as
+              floating beside the copy rather than belonging to it. Stacked and
+              centred is cleaner at this width; back to a row from sm. */}
+          <div className="flex flex-col items-center gap-2 text-center sm:flex-row sm:gap-3 sm:text-left">
             <img src={logoMark} alt="" className="h-6 w-6 shrink-0" aria-hidden />
             <span>
               SecureShare —{' '}
