@@ -81,7 +81,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           className="header-scrim pointer-events-none absolute inset-x-0 top-0 h-[calc(100%+1.25rem)]"
           aria-hidden
         />
-        <div className="glass relative mx-auto mt-4 flex max-w-6xl items-center justify-between rounded-2xl px-3 py-2.5 sm:px-6 sm:py-3">
+        {/* Gutter matching <main>'s px-4 sm:px-6. Without it the pill is
+            mx-auto max-w-6xl with nothing outside it, so on any screen narrower
+            than 6xl it runs edge to edge while the content below sits inset --
+            the rounded corners end up flush against the viewport. The scrim
+            stays OUTSIDE this wrapper so the blur band remains full-bleed. */}
+        <div className="relative px-4 sm:px-6">
+          <div className="glass mx-auto mt-4 flex max-w-6xl items-center justify-between rounded-2xl px-3 py-2.5 sm:px-6 sm:py-3">
           {/* Standard convention: the wordmark goes home, not to the app.
               Home is /home because / now opens straight onto /create. */}
           <Link to="/home" className="flex items-center gap-3" aria-label="SecureShare home">
@@ -219,6 +225,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 )}
               </div>
             )}
+            </div>
           </div>
         </div>
       </header>
