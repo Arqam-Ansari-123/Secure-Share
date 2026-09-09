@@ -93,7 +93,7 @@ export function PasswordInput({
  *     page -- navigating away from a one-time secret that has already been
  *     burned means losing it.
  */
-const URL_RE = /https?:\/\/[^\s<>"'`]+/gi
+const URL_RE = /https?:\/\/[^\s<>"'`]+/gi
 
 export function Linkify({ text }: { text: string }) {
   const out: ReactNode[] = []
