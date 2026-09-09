@@ -156,11 +156,23 @@ function Orbiters() {
           ) : (
             <torusGeometry args={[0.1, 0.036, 8, 16]} />
           )}
+          {/* White, matching the bars inside the logo itself (#F4F4F4) rather
+              than the old navy #2d7ba3 / #8aa4b3, which read as a second accent
+              colour competing with the red mark.
+
+              The depth variation is kept, but expressed through EMISSIVE rather
+              than hue: every third bit carries a faint neutral glow so it lifts
+              out of the dark, while the rest are lit only by the scene. Two
+              near-identical whites would have flattened the whole cloud.
+
+              A little metalness stops white going chalky -- these read as the
+              brushed silver bars from the mark, not as paper. */}
           <meshStandardMaterial
-            color={i % 3 === 0 ? '#2d7ba3' : '#8aa4b3'}
-            emissive={i % 3 === 0 ? '#1b4b66' : '#000000'}
+            color={i % 3 === 0 ? '#ffffff' : '#f4f4f4'}
+            emissive={i % 3 === 0 ? '#5a6066' : '#000000'}
             emissiveIntensity={0.5}
-            roughness={0.5}
+            roughness={0.42}
+            metalness={0.18}
           />
         </mesh>
       ))}
@@ -194,7 +206,15 @@ export function Hero3D() {
       <PerspectiveCamera makeDefault position={[0, 0, 7.2]} fov={42} />
       <ambientLight intensity={0.55} />
       <directionalLight position={[4, 6, 5]} intensity={2.1} castShadow />
-      <pointLight position={[-5, -2, 3]} intensity={30} color="#2d7ba3" />
+      {/* Two rim lights, cool from the left and warm from the right, giving the
+          mark its dimensionality.
+
+          The cool one used to be brand navy #2d7ba3 -- saturated enough that it
+          tinted the orbiting bits blue no matter what colour their material was.
+          Now a barely-cool white: the rim shaping survives, but white geometry
+          finally reads as white. The warm side stays brand red, since it lands
+          on the red mark and reinforces it rather than fighting it. */}
+      <pointLight position={[-5, -2, 3]} intensity={30} color="#dceaf2" />
       <pointLight position={[4, -3, -4]} intensity={22} color="#e2503b" />
       <Suspense fallback={null}>
         <Float speed={1.3} rotationIntensity={0.22} floatIntensity={0.55}>
