@@ -343,11 +343,18 @@ export function Requests() {
 
               {opened[r.rid] !== undefined && (
                 <div className="mt-4 rounded-xl border border-brand-red/25 bg-brand-red/8 p-4">
-                  <div className="mb-3 flex items-center justify-between">
+                  {/* Stacks on mobile. This label is long, uppercase and
+                      tracking-widest, so on a phone it wraps to three lines
+                      while justify-between pins the buttons right and centres
+                      them against that block -- they end up floating in the
+                      middle of the wrapped text. Reveal uses the same row but
+                      its label is the single word "Secret", which is why only
+                      this one breaks. */}
+                  <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <p className="font-mono text-xs tracking-widest text-muted uppercase">
                       Client&apos;s reply — destroyed on our servers
                     </p>
-                    <div className="flex gap-2">
+                    <div className="flex shrink-0 gap-2">
                       <button
                         type="button"
                         onClick={() => setMasked((m) => ({ ...m, [r.rid]: !m[r.rid] }))}

@@ -121,7 +121,9 @@ export function Reveal() {
           <div className="card p-5">
             <div className="mb-3 flex items-center justify-between">
               <p className="font-mono text-xs tracking-widest text-muted uppercase">Secret</p>
-              <div className="flex gap-2">
+              {/* shrink-0 only. The label here is one short word so the row
+                  never wraps -- no need to restructure a layout that works. */}
+              <div className="flex shrink-0 gap-2">
                 <button
                   type="button"
                   onClick={() => setMasked((m) => !m)}
