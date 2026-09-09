@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom'
 // logo larger than the staff one, which is precisely where the old 375x134 PNG
 // was being upscaled and going soft.
 import logoWithName from '../../Assets/genetech-wordmark-dark.svg'
-import logoMark from '../../Assets/logo.png'
+import logoMark from '../../Assets/icon.svg'
 
 /**
  * The layout an external client sees.
@@ -79,7 +79,7 @@ export function PublicShell({
 
       <footer className={`mx-auto w-full ${gutter} px-4 pb-12 sm:px-6`}>
         <div className="flex flex-col items-center gap-3 border-t border-white/8 pt-8 text-center text-sm text-muted">
-          <img src={logoMark} alt="" className="h-6 w-6 opacity-70" aria-hidden />
+          <img src={logoMark} alt="" className="h-6 w-auto opacity-70" aria-hidden />
           <p>
             SecureShare — by{' '}
             <a

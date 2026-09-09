@@ -25,7 +25,7 @@ import { useAuth } from '../lib/auth'
 // `GenetechSolutions Logo.svg` (navy wordmark) stays in Assets/ for light
 // backgrounds, along with the old PNGs.
 import logoWithName from '../../Assets/genetech-wordmark-dark.svg'
-import logoMark from '../../Assets/logo.png'
+import logoMark from '../../Assets/icon.svg'
 
 const NAV = [
   { to: '/home', label: 'Home' },
@@ -242,7 +242,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               floating beside the copy rather than belonging to it. Stacked and
               centred is cleaner at this width; back to a row from sm. */}
           <div className="flex flex-col items-center gap-2 text-center sm:flex-row sm:gap-3 sm:text-left">
-            <img src={logoMark} alt="" className="h-6 w-6 shrink-0" aria-hidden />
+            <img src={logoMark} alt="" className="h-6 w-auto shrink-0" aria-hidden />
             <span>
               SecureShare —{' '}
               <a

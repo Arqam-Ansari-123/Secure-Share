@@ -4,7 +4,7 @@ import { Float, PerspectiveCamera, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 
 import { usePrefersReducedMotion } from './ui'
-import logoMark from '../../Assets/logo.png'
+import logoMark from '../../Assets/icon.svg'
 
 /**
  * The Genetech speech-bubble mark as a real modelled asset, lit like a physical

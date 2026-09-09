@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 // PublicShell.tsx took over the client-facing half. Kept in step with them so it
 // is not misleading if anyone opens it, but it is a candidate for deletion.
 import logoWithName from '../../Assets/logo-wordmark-dark.png'
-import logoMark from '../../Assets/logo.png'
+import logoMark from '../../Assets/icon.svg'
 
 const NAV = [
   { to: '/create', label: 'Create secret' },
@@ -52,7 +52,7 @@ export function Shell({ children, bare = false }: { children: ReactNode; bare?: 
       <footer className="mx-auto mt-16 w-full max-w-6xl px-4 pb-10 sm:px-6">
         <div className="flex flex-col items-center gap-4 border-t border-white/8 pt-8 text-sm text-muted sm:flex-row sm:justify-between">
           <div className="flex items-center gap-3">
-            <img src={logoMark} alt="" className="h-6 w-6" aria-hidden />
+            <img src={logoMark} alt="" className="h-6 w-auto" aria-hidden />
             <span>
               SecureShare — built by{' '}
               <a
