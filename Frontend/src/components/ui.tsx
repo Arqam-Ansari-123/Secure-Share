@@ -113,7 +113,7 @@ export function Linkify({ text }: { text: string }) {
         href={url}
         target="_blank"
         rel="noreferrer noopener nofollow"
-        className="text-brand-red-hot underline decoration-brand-red/50 underline-offset-2 hover:decoration-brand-red-hot"
+        className="text-neon underline decoration-neon-dim underline-offset-2 transition hover:decoration-neon"
       >
         {url}
       </a>,

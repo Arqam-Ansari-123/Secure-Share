@@ -21,6 +21,14 @@
   --color-ink-800: #0d1e2a;
   --color-ink-700: #14303f;
 
+  /* Links inside a revealed secret. Deliberately NOT brand red: red is this
+     app's danger colour -- the "Destroyed" banner, the burn notice, every
+     destructive button -- so a red link reads as an error rather than
+     something to click. Cyan sits in the navy half of the palette, cannot be
+     mistaken for a warning, and hits ~11.8:1 on the ink-950 code surface. */
+  --color-neon: #4fd9ff;
+  --color-neon-dim: #1c93b8;
+
   --color-paper: #f2f6f8;
   --color-muted: #8aa4b3;
 
